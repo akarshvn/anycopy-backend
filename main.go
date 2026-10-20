@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -59,8 +60,16 @@ func auth(token string, next http.Handler) http.Handler {
 
 func postItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		var it Item
+
+		var tooBig *http.MaxBytesError
 		if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
+			if errors.As(err, &tooBig) {
+				http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+				return
+			}
+
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
