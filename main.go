@@ -1,10 +1,12 @@
 package main
 
 import (
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	_ "modernc.org/sqlite"
@@ -24,6 +26,25 @@ type Item struct {
 	Kind         string `json:"kind"`
 	Content      string `json:"content"`
 	SourceDevice string `json:"source_device"`
+}
+
+func auth(token string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		got := r.Header.Get("Authorization")
+		want := "Bearer " + token
+
+		if subtle.ConstantTimeCompare([]byte(got), []byte(want)) != 1 {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func postItem(db *sql.DB) http.HandlerFunc {
@@ -134,8 +155,12 @@ func main() {
 
 		log.Fatal(err)
 	}
-
 	log.Println("db ready")
+
+	token := os.Getenv("ANYCOPY_TOKEN")
+	if token == "" {
+		log.Fatal("ANYCOPY_TOKEN is not set")
+	}
 
 	mux := http.NewServeMux()
 
@@ -144,8 +169,8 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /items", postItem(db))
-
 	mux.HandleFunc("GET /items", getItems(db))
+
 	log.Println("listening on 8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", auth(token, mux)))
 }
