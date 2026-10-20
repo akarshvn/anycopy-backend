@@ -38,7 +38,7 @@ Requests with a missing or wrong token get a 401 response.
 ## API
 
 * GET /health returns a short status message
-* POST /items stores an item
+* POST /items stores an item and returns it
 * GET /items returns all items, oldest first
 * GET /items?since=5 returns items with an id greater than 5
 
@@ -53,3 +53,17 @@ Example POST body:
 ```
 
 The kind field is optional and defaults to text. Allowed values are text and link.
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "kind": "link",
+  "content": "https://example.com",
+  "source_device": "windows",
+  "created_at": "2026-10-21T09:30:00Z"
+}
+```
+
+The created_at value is in UTC. Request bodies larger than 1 MiB are rejected with a 413 response.
