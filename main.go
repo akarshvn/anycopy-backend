@@ -152,7 +152,13 @@ func getItems(db *sql.DB) http.HandlerFunc {
 }
 
 func main() {
-	db, err := sql.Open("sqlite", "links.db")
+
+	token := os.Getenv("ANYCOPY_TOKEN")
+	if token == "" {
+		log.Fatal("ANYCOPY_TOKEN is not set")
+	}
+
+	db, err := sql.Open("sqlite", "file:links.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
 
 	if err != nil {
 		log.Fatal(err)
@@ -165,15 +171,10 @@ func main() {
 	}
 	log.Println("db ready")
 
-	token := os.Getenv("ANYCOPY_TOKEN")
-	if token == "" {
-		log.Fatal("ANYCOPY_TOKEN is not set")
-	}
-
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("okie"))
+		_, _ = w.Write([]byte("okie"))
 	})
 
 	mux.HandleFunc("POST /items", postItem(db))
