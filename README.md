@@ -1,6 +1,6 @@
 # AnyCopy
 
-Copy once and access it across all your devices. 
+Copy once and access it across all your devices.
 
 This repo is the Go backend. The Android and macOS clients live in separate repositories.
 
@@ -10,12 +10,30 @@ This repo is the Go backend. The Android and macOS clients live in separate repo
 
 ## Run
 
+Set the ANYCOPY_TOKEN environment variable, then start the server:
+
 ```
 go mod tidy
-go run .
+ANYCOPY_TOKEN=yourtoken go run .
+```
+
+The server refuses to start if ANYCOPY_TOKEN is not set. Use a long random string, for example the output of:
+
+```
+python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 The server listens on port 8080 and creates a SQLite file named links.db on first start.
+
+## Authentication
+
+Every route except GET /health requires this header:
+
+```
+Authorization: Bearer yourtoken
+```
+
+Requests with a missing or wrong token get a 401 response.
 
 ## API
 
