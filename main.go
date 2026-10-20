@@ -26,6 +26,8 @@ type Item struct {
 	Kind         string `json:"kind"`
 	Content      string `json:"content"`
 	SourceDevice string `json:"source_device"`
+	CreatedAt    string `json:"created_at"`
+}
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -78,10 +80,10 @@ func postItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		res, err := db.Exec(
-			"INSERT INTO items(kind, content, source_device) VALUES (?, ?, ?)",
+		err := db.QueryRow(
+			"INSERT INTO items(kind, content, source_device) VALUES (?, ?, ?) RETURNING id, created_at",
 			it.Kind, it.Content, it.SourceDevice,
-		)
+		).Scan(&it.ID, &it.CreatedAt)
 
 		if err != nil {
 			log.Println("insert failed: ", err)
@@ -89,13 +91,6 @@ func postItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		id, err := res.LastInsertId()
-		if err != nil {
-			log.Println("last insert id: ", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-		it.ID = id
 		writeJSON(w, http.StatusCreated, it)
 	}
 }
@@ -114,7 +109,7 @@ func getItems(db *sql.DB) http.HandlerFunc {
 		}
 
 		rows, err := db.Query(
-			"SELECT id, kind, content, source_device FROM items WHERE id > ? ORDER BY id",
+			"SELECT id, kind, content, source_device, created_at FROM items WHERE id > ? ORDER BY id",
 			since,
 		)
 		if err != nil {
@@ -129,7 +124,7 @@ func getItems(db *sql.DB) http.HandlerFunc {
 		for rows.Next() {
 			var it Item
 
-			if err := rows.Scan(&it.ID, &it.Kind, &it.Content, &it.SourceDevice); err != nil {
+			if err := rows.Scan(&it.ID, &it.Kind, &it.Content, &it.SourceDevice, &it.CreatedAt); err != nil {
 				log.Println("scan failed: ", err)
 				http.Error(w, "internal error", http.StatusInternalServerError)
 				return
