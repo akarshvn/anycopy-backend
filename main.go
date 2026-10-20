@@ -26,6 +26,14 @@ type Item struct {
 	Kind         string `json:"kind"`
 	Content      string `json:"content"`
 	SourceDevice string `json:"source_device"`
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Println("encode response: ", err)
+	}
 }
 
 func auth(token string, next http.Handler) http.Handler {
@@ -88,10 +96,7 @@ func postItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		it.ID = id
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(it)
+		writeJSON(w, http.StatusCreated, it)
 	}
 }
 
@@ -138,8 +143,7 @@ func getItems(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(items)
+		writeJSON(w, http.StatusOK, items)
 	}
 }
 
