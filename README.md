@@ -41,6 +41,7 @@ Requests with a missing or wrong token get a 401 response.
 * POST /items stores an item and returns it
 * GET /items returns all items, oldest first
 * GET /items?since=5 returns items with an id greater than 5
+* DELETE /items/{id} deletes an item and responds with 204, or 404 if id does not exist 
 
 Example POST body:
 
