@@ -151,6 +151,39 @@ func getItems(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func deleteItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+
+		if err != nil {
+			log.Println("ParseInt of id failed: ", err)
+			http.Error(w, "invalid id", http.StatusBadRequest)
+			return
+		}
+
+		res, err := db.Exec("DELETE FROM items WHERE id = ?", id)
+		if err != nil {
+			log.Println("delete failed: ", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		n, err := res.RowsAffected()
+		if err != nil {
+			log.Println("rows affected: ", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		if n == 0 {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func main() {
 
 	token := os.Getenv("ANYCOPY_TOKEN")
@@ -179,6 +212,7 @@ func main() {
 
 	mux.HandleFunc("POST /items", postItem(db))
 	mux.HandleFunc("GET /items", getItems(db))
+	mux.HandleFunc("DELETE /items/{id}", deleteItem(db))
 
 	log.Println("listening on 8080")
 	log.Fatal(http.ListenAndServe(":8080", auth(token, mux)))
